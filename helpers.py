@@ -133,6 +133,17 @@ def create_db_by_loading_docs(paths=["users/0/files/MachineLearning-Lecture01.pd
     log_dirs(persist_directory)
     return has_uploaded
 
+def create_chain(user_id, has_uploaded=False):
+    if has_uploaded:
+        persist_directory = f"users/{user_id}/chroma/"
+    else:
+        persist_directory = f"users/0/chroma/"
+    embedding = OpenAIEmbeddings()
+    vectordb = Chroma(persist_directory=persist_directory, embedding_function=embedding)
+    compression_retriever = create_retriever(vectordb, embedding)
+    qachain = create_conv_chain(compression_retriever)
+    return qachain
+
 def initial_setup():
     setup_api_key()
     
@@ -144,7 +155,7 @@ def initial_setup():
     download_loc="users/0/files/MachineLearning-Lecture01.pdf"
     download_url = "https://see.stanford.edu/materials/aimlcs229/transcripts/MachineLearning-Lecture01.pdf"
     download_default_doc(download_url, download_loc)
-    log_dirs(download_loc)
+    log_dirs("/".join(download_loc.split("/")[:-1]))
     
     create_db_by_loading_docs()
 
@@ -154,17 +165,6 @@ def convert_hist_ui_to_chat_hist(hist_ui):
         usermsg, assmsg = turn
         chat_history += [(usermsg, assmsg)]
     return chat_history
-
-def create_chain(user_id, has_uploaded=False):
-    if has_uploaded:
-        persist_directory = f"users/{user_id}/chroma/"
-    else:
-        persist_directory = f"users/0/chroma/"
-    embedding = OpenAIEmbeddings()
-    vectordb = Chroma(persist_directory=persist_directory, embedding_function=embedding)
-    compression_retriever = create_retriever(vectordb, embedding)
-    qachain = create_conv_chain(compression_retriever)
-    return qachain
 
 def process_input(user, hist_ui, user_no, has_uploaded):
     if user.strip() == "":
@@ -214,10 +214,17 @@ def remove_prev_n_excess_files(curr_time_sec):
         print(f"<<Deleted {uid}>>")
     del remove_files
     
-    ALL_USER_FILES = all_files
+    set_all_user_files(all_files)
 
 def add_new_user_file(user_file):
     ALL_USER_FILES.append(user_file)
+
+def set_all_user_files(all_files):
+    n = len(ALL_USER_FILES)
+    for i in range(n):
+        ALL_USER_FILES.pop()
+    for i, e in enumerate(all_files):
+        ALL_USER_FILES.append(e)
     
 def show_all_user_files():
     print(ALL_USER_FILES)
