@@ -108,6 +108,8 @@ def create_conv_chain(compression_retriever):
 
 def create_db_by_loading_docs(paths=["users/0/files/MachineLearning-Lecture01.pdf"],
                               user_id="0"):
+    print(f"----- Start Creating DB for User {user_id} -----")
+    print("Uploaded Files:", paths)
     has_uploaded = False
     if user_id != "0":
 #         await delete_db_after_timeout(user_id)
@@ -122,18 +124,19 @@ def create_db_by_loading_docs(paths=["users/0/files/MachineLearning-Lecture01.pd
         show_all_user_files()
         
         os.system(f"mkdir -p users/{user_id}/chroma")
-        log_dirs("./users/")
+        log_dirs(f"./users/{user_id}")
         
         has_uploaded = True
-    print(paths)
     pages = load_docs(paths)
     chunks = split_docs(pages)
     persist_directory = f"users/{user_id}/chroma/"
     vectordb, embedding = create_vector_db(chunks, persist_directory)
     log_dirs(persist_directory)
+    print(f"----- Complete Creating DB -----")
     return has_uploaded
 
 def create_chain(user_id, has_uploaded=False):
+    print(f"----- Start Creating Chain for User {user_id} -----")
     if has_uploaded:
         persist_directory = f"users/{user_id}/chroma/"
     else:
@@ -142,9 +145,11 @@ def create_chain(user_id, has_uploaded=False):
     vectordb = Chroma(persist_directory=persist_directory, embedding_function=embedding)
     compression_retriever = create_retriever(vectordb, embedding)
     qachain = create_conv_chain(compression_retriever)
+    print(f"----- Complete Creating Chain -----")
     return qachain
 
 def initial_setup():
+    print("----- Start Initial Setup -----")
     setup_api_key()
     
     os.system("mkdir -p users/0/chroma")
@@ -158,6 +163,7 @@ def initial_setup():
     log_dirs("/".join(download_loc.split("/")[:-1]))
     
     create_db_by_loading_docs()
+    print("----- Complete Initial Setup -----")
 
 def convert_hist_ui_to_chat_hist(hist_ui):
     chat_history = []
