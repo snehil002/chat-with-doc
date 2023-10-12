@@ -20,9 +20,9 @@ from langchain.retrievers.document_compressors import LLMChainExtractor
 from langchain.llms import OpenAI
 # from langchain.callbacks import get_openai_callback
 
-ALL_USER_FILES = []
-MAX_TIME_IN_SEC = 900
-MAX_USERS = 10
+ALL_USER_FILES = {}
+MAX_ALLOWED_TIME_SEC = 900
+MAX_ALLOWED_USERS = 10
 
 def setup_api_key():
     openai.api_key = os.environ["OPENAI_API_KEY"]
@@ -117,30 +117,36 @@ def create_db_by_loading_docs(paths=["users/0/files/MachineLearning-Lecture01.pd
 #         print("Timer set:", user_id)
         curr_time_sec = time.time()
         remove_prev_n_excess_files(curr_time_sec)
-        add_new_user_file({
-            "user_id": user_id,
-            "upl_time_sec": curr_time_sec
-        })
+        add_new_user_file(user_id=user_id, upl_time_sec=curr_time_sec)
         show_all_user_files()
-        
         os.system(f"mkdir -p users/{user_id}/chroma")
         log_dirs(f"./users/{user_id}")
-        
         has_uploaded = True
     pages = load_docs(paths)
     chunks = split_docs(pages)
     persist_directory = f"users/{user_id}/chroma/"
     vectordb, embedding = create_vector_db(chunks, persist_directory)
     log_dirs(persist_directory)
+    print("<<<Files under ./users/ :>>>")
+    os.system("ls users")
     print(f"----- Complete Creating DB -----")
     return has_uploaded
 
-def create_chain(user_id, has_uploaded=False):
+def create_chain(user_id="0", has_uploaded=False):
     print(f"----- Start Creating Chain for User {user_id} -----")
-    if has_uploaded:
-        persist_directory = f"users/{user_id}/chroma/"
+    show_all_user_files()
+    print("<<<Files under ./users/ :>>>")
+    os.system("ls users")
+    
+    if user_id != "0" and has_uploaded == True:
+        if check_user_file_exists(user_id):
+            persist_directory = f"users/{user_id}/chroma/"
+        else:
+            print("Sorry! Timeout! Your files were deleted! Please re-upload!")
+            raise Exception("Sorry! Timeout! Your files were deleted! Please re-upload!")
     else:
-        persist_directory = f"users/0/chroma/"
+        persist_directory = "users/0/chroma/"
+
     embedding = OpenAIEmbeddings()
     vectordb = Chroma(persist_directory=persist_directory, embedding_function=embedding)
     compression_retriever = create_retriever(vectordb, embedding)
@@ -170,6 +176,9 @@ def convert_hist_ui_to_chat_hist(hist_ui):
     for turn in hist_ui:
         usermsg, assmsg = turn
         chat_history += [(usermsg, assmsg)]
+#         chat_history += f"""Human: {usermsg}
+# Assistant: {assmsg}
+# """
     return chat_history
 
 def process_input(user, hist_ui, user_no, has_uploaded):
@@ -183,6 +192,11 @@ def process_input(user, hist_ui, user_no, has_uploaded):
     chat_history = convert_hist_ui_to_chat_hist(hist_ui)
     response = qachain({"question": user.strip(), "chat_history": chat_history}) 
     source = [r.to_document() for r in response["source_documents"]]
+    source = [(
+            "Text: " + r.page_content, "Page: " + str(r.metadata["page"]), 
+            "File: " + r.metadata["source"].split("/")[-1]
+            ) for r in source
+        ]
     db_query = response["generated_question"]
     # hist_ui = convert_mem_to_hist_ui(qachain)
     # qachain.memory.clear()
@@ -192,45 +206,54 @@ def process_input(user, hist_ui, user_no, has_uploaded):
     return response["answer"], db_query, source
 
 def remove_prev_n_excess_files(curr_time_sec):
-    max_time_sec = MAX_TIME_IN_SEC
-    max_files = MAX_USERS
-    all_files = ALL_USER_FILES
+    max_time_sec = MAX_ALLOWED_TIME_SEC
+    max_users = MAX_ALLOWED_USERS
+    users = ALL_USER_FILES
     remove_files = []
     excess = -1
+
+#     remove_files += [
+#         fil for fil in all_files if curr_time_sec - fil["upl_time_sec"] >= max_time_sec
+#     ]
+#     all_files = [
+#         fil for fil in all_files if curr_time_sec - fil["upl_time_sec"] < max_time_sec
+#     ]
+
+    remove_users = [k for k, v in users.items() if curr_time_sec - v >= max_time_sec]
+    remain_users = [k for k, v in users.items() if curr_time_sec - v < max_time_sec]
     
-    if len(all_files) > max_files:
-        excess = (len(all_files) - max_files) + 1
-    elif len(all_files) == max_files:
+    n = len(remain_users)
+    
+    if n > max_users:
+        excess = (n - max_users) + 1
+    elif n == max_users:
         excess = 1
 
     if excess > 0:
         for i in range(excess):
-            remove_files.append(all_files.pop(0))
+            remove_users.append(remain_users[i])
     
-    remove_files += list(filter(
-        lambda fil: curr_time_sec - fil["upl_time_sec"] >= max_time_sec, all_files
-    ))
-    all_files = list(filter(
-        lambda fil: curr_time_sec - fil["upl_time_sec"] < max_time_sec, all_files
-    ))
-    
-    for fil in remove_files:
-        uid = fil["user_id"]
+    for uid in remove_users:
+        del ALL_USER_FILES[uid]
         os.system(f"rm -rf users/{uid}")
         print(f"<<Deleted {uid}>>")
-    del remove_files
     
-    set_all_user_files(all_files)
+    del remain_users
+    del remove_users
 
-def add_new_user_file(user_file):
-    ALL_USER_FILES.append(user_file)
+def add_new_user_file(user_id, upl_time_sec):
+    ALL_USER_FILES[user_id] = upl_time_sec
 
-def set_all_user_files(all_files):
-    n = len(ALL_USER_FILES)
-    for i in range(n):
-        ALL_USER_FILES.pop()
-    for i, e in enumerate(all_files):
-        ALL_USER_FILES.append(e)
+# def set_all_user_files(all_files):
+#     n = len(ALL_USER_FILES)
+#     for i in range(n):
+#         ALL_USER_FILES.pop()
+#     for i, e in enumerate(all_files):
+#         ALL_USER_FILES.append(e)
     
 def show_all_user_files():
+    print("<<<All user ids:>>>")
     print(ALL_USER_FILES)
+
+def check_user_file_exists(user_id):
+    return user_id in ALL_USER_FILES
