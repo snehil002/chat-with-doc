@@ -197,6 +197,8 @@ def process_input(user, hist_ui, user_no, has_uploaded):
             "File: " + r.metadata["source"].split("/")[-1]
             ) for r in source
         ]
+    source = ["- " + str(r) for r in source]
+    source_str = "\n".join(source)
     db_query = response["generated_question"]
     # hist_ui = convert_mem_to_hist_ui(qachain)
     # qachain.memory.clear()
