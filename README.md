@@ -1,8 +1,8 @@
 ---
-title: Chat With Lecture
-emoji: 🌍
-colorFrom: blue
-colorTo: blue
+title: Chat With Documents
+emoji: 😎
+colorFrom: yellow
+colorTo: green
 sdk: gradio
 sdk_version: 3.40.1
 app_file: app.py
