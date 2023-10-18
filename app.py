@@ -15,14 +15,14 @@ def format_file_names(file_paths):
 {files_str}"""
 
 
-def format_current_query(query):
-    return f"""**Current DB Query:**  
-{query}"""
+# def format_current_query(query):
+#     return f"""**Current DB Query:**  
+# {query}"""
 
 
-def format_retrieved_docs(docs):
-    return f"""**Retrieved Documents:**  
-{docs}"""
+# def format_retrieved_docs(docs):
+#     return f"""**Retrieved Documents:**  
+# {docs}"""
 
 
 # def format_info(user_state, docs_state, upl_state):
@@ -43,25 +43,26 @@ def ui_func(user, history):
     return "", history + [[user, None]]
 
 
-def ui_func_2(history, user_state, upl_state):
+def ui_func_2(history, user_state, upl_state, log_state):
 #     print("User ID:", user_state)
     user = history.pop()[0]
     curr_query = ""
     retrieved_docs = ""
     
     try:
-        response, curr_query, retrieved_docs = process_input(
+        response, curr_log = process_input(
             user, history, user_state, upl_state
         )
         history += [[user, response]]
         user = ""
+        log_state += [curr_log]
     
     except Exception as exp:
         print("Error!")
         print(exp)
         gr.Error(str(exp))
     
-    return user, history, format_current_query(curr_query), format_retrieved_docs(retrieved_docs)
+    return user, history, log_state, log_state
 
 
 def show_files_and_create_chain_ui(files, user_state, docs_state, upl_state, curr_files):
@@ -99,6 +100,7 @@ Upload any PDF document of interest. Then ask any question in the input field. P
     docs_state = gr.State(["MachineLearning-Lecture01.pdf"])
     upl_state = gr.State(False)
     user_state = gr.State(generate_unique_no)
+    log_state = gr.State([])
     
     with gr.Tab("Chat Lounge"):
         chatbot = gr.Chatbot(label="Chat History", height=400)
@@ -109,15 +111,18 @@ Upload any PDF document of interest. Then ask any question in the input field. P
     with gr.Tab("AI Chronicles"):
         gr.Markdown("""Text from your uploaded files used to answer your question is shown below.
 These pieces of text are extracted from a Vector DB.""")
-        gen_ques = gr.Markdown(format_current_query(""))
-        retr_docs = gr.Markdown(format_retrieved_docs(""))
+        # gen_ques = gr.Markdown(format_current_query(""))
+        # retr_docs = gr.Markdown(format_retrieved_docs(""))
+        log_json_comp = gr.JSON([])
     
     sendbtn.click(ui_func, [msg, chatbot], [msg, chatbot], queue=False).then(
-      ui_func_2, [chatbot, user_state, upl_state], [msg, chatbot, gen_ques, retr_docs]
+      ui_func_2, [chatbot, user_state, upl_state, log_state], 
+      [msg, chatbot, log_state, log_json_comp]
     )
     
     msg.submit(ui_func, [msg, chatbot], [msg, chatbot], queue=False).then(
-      ui_func_2, [chatbot, user_state, upl_state], [msg, chatbot, gen_ques, retr_docs]
+      ui_func_2, [chatbot, user_state, upl_state, log_state], 
+      [msg, chatbot, log_state, log_json_comp]
     )
     
     with gr.Tab("Upload PDF"):

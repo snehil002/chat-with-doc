@@ -192,21 +192,35 @@ def process_input(user, hist_ui, user_no, has_uploaded):
     chat_history = convert_hist_ui_to_chat_hist(hist_ui)
     response = qachain({"question": user.strip(), "chat_history": chat_history}) 
     source = [r.to_document() for r in response["source_documents"]]
-    source = [( 
-            "**Text:** " + r.page_content + "  \n" +
-            "**Page:** " + str(r.metadata["page"]) + " | " +
-            "**File:** " + r.metadata["source"].split("/")[-1]
-            ) for r in source
-        ]
-    source = [str(r) for r in source]
-    source_str = "\n\n".join(source)
+    # source = [( 
+    #         "**Text:** " + r.page_content + "  \n" +
+    #         "**Page:** " + str(r.metadata["page"]) + " | " +
+    #         "**File:** " + r.metadata["source"].split("/")[-1]
+    #         ) for r in source
+    #     ]
+    # source = [str(r) for r in source]
+    # source_str = "\n\n".join(source)
+    source = [
+      {
+        "page_content": r.page_content,
+        "metadata": {
+          "page_no": r.metadata.page,
+          "file_name": r.metadata.source.split("/")[-1]
+        }
+      }
+      for r in source
+    ]
     db_query = response["generated_question"]
+    logs = {
+        "db_query": db_query,
+        "retr_docs": source
+    }
     # hist_ui = convert_mem_to_hist_ui(qachain)
     # qachain.memory.clear()
     ## History for ui, Total Tokens, Prompt Tokens, Completion Tokens, Total Cost (USD)
     # hist_ui, cb.total_tokens, cb.prompt_tokens, cb.completion_tokens, cb.total_cost
     # history + [[user, user]], "query: " + user, "docs: " + user
-    return response["answer"], db_query, source_str
+    return response["answer"], logs
 
 def remove_prev_n_excess_files(curr_time_sec):
     max_time_sec = MAX_ALLOWED_TIME_SEC
