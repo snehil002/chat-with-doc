@@ -192,7 +192,7 @@ def process_input(user, hist_ui, user_no, has_uploaded):
     chat_history = convert_hist_ui_to_chat_hist(hist_ui)
     response = qachain({"question": user.strip(), "chat_history": chat_history}) 
     source = [r.to_document() for r in response["source_documents"]]
-    # source = [( 
+    # source = [(
     #         "**Text:** " + r.page_content + "  \n" +
     #         "**Page:** " + str(r.metadata["page"]) + " | " +
     #         "**File:** " + r.metadata["source"].split("/")[-1]
@@ -204,8 +204,8 @@ def process_input(user, hist_ui, user_no, has_uploaded):
       {
         "page_content": r.page_content,
         "metadata": {
-          "page_no": r.metadata.page,
-          "file_name": r.metadata.source.split("/")[-1]
+          "page_no": r.metadata["page"],
+          "file_name": r.metadata["source"].split("/")[-1]
         }
       }
       for r in source
