@@ -76,13 +76,13 @@ def create_vector_db(chunks, persist_directory):
     return vectordb, embedding
 
 def create_retriever(vectordb, embedding):
-    retriever = vectordb.as_retriever()
+    retriever = vectordb.as_retriever(search_type="mmr")
 
-    splitter = CharacterTextSplitter(chunk_size=300, chunk_overlap=0, separator=". ")
+    # splitter = CharacterTextSplitter(chunk_size=300, chunk_overlap=0, separator=". ")
     redundant_filter = EmbeddingsRedundantFilter(embeddings=embedding)
-    relevant_filter = EmbeddingsFilter(embeddings=embedding, similarity_threshold=0.76)
+    # relevant_filter = EmbeddingsFilter(embeddings=embedding, similarity_threshold=0.76)
     pipeline_compressor = DocumentCompressorPipeline(
-        transformers=[splitter, redundant_filter, relevant_filter]
+        transformers=[redundant_filter]
     )
 
     compression_retriever = ContextualCompressionRetriever(
