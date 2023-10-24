@@ -94,8 +94,7 @@ css="""
 """
 
 with gr.Blocks(css=css) as demo:
-    gr.Markdown("""# Chat with any Document of your interest
-Upload any PDF document of interest. Then ask any question in the input field. Press Enter to Send. History remains on this page! 😇""")
+    gr.Markdown("""# PDF Sage: Intelligent Document Query Chatbot""")
     
     docs_state = gr.State(["MachineLearning-Lecture01.pdf"])
     upl_state = gr.State(False)
@@ -141,14 +140,22 @@ is uploaded here.""")
             [upload_button, user_state, docs_state, upl_state, current_files],
             [docs_state, upl_state, current_files]
         )
-    
-    with gr.Tab("About"):
-        gr.Markdown("""LLM behind this system: **gpt-3.5-turbo**  
-Flow of System:  
+
+    with gr.Tab("Get Started"):
+        gr.Markdown("""## Ready to get started?
+
+1. Upload any PDF document of interest.
+2. Then, ask any questions in the input field.
+3. Simply press 'Enter' or 'Ask AI' Button to send your message. 
+4. 'Chat Lounge': Entire Conversation History remains on this page!
+5. 'AI chronicles': Interal System Logs.
+6. 'Upload PDF': Upload your PDF files here. 😇
+
+## Flow of System:  
+
 1. Your question is sent to a Vector DB to fetch relevant documents.
 2. Then these documents and your chat history is sent to the above LLM.
-3. The LLM answers your question using this context.
-""")
+3. The LLM answers your question using this context.""")
 
 demo.queue()
 demo.launch(show_error=True)
